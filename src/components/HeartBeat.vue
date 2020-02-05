@@ -1,6 +1,7 @@
 <template>
   <svg viewBox="0 0 300 400" @click="reflesh">
     <defs>
+      <!-- パスに適用するグラデーション -->
       <linearGradient id="line-grad">
         <stop :offset="animData.xPos - 0.65" stop-color="rgba(50,10,0,0)" />
         <stop :offset="animData.xPos - 0.35" stop-color="rgba(50,10,0,0.2)" />
@@ -9,7 +10,9 @@
         <stop :offset="(animData.xPos || 0) + 0.01" stop-color="rgba(50,10,0,0.0)" />
       </linearGradient>
     </defs>
+    <!-- 横軸 -->
     <line x1="0" y1="100" x2="300" y2="100" stroke="rgb(30,40,50)" stroke-width="0.2" />
+    <!-- メインのパス -->
     <path 
       class="path" 
       fill="none" 
@@ -27,7 +30,7 @@ import { createComponent, computed, reactive, onMounted, ref } from '@vue/compos
 const ANCHOR_COUNT = 13 // アンカーポイントの数
 const WIDTH = 300 // ステージの幅
 const XSCALE = WIDTH / (ANCHOR_COUNT - 1) // アンカーポイントの間隔(X)
-const YSCALE = 50 // 振幅の最大値
+const YSCALE = 30 // 振幅の最大値
 const YBASE = 100 // Y方向ベースライン
 const CT_DELTA = 0.35 // ベジェ曲線のコントロール点の位置（0-0.5）。山の尖り方が変わる
 const ANIMDUR = 1200 // アニメーション一周の長さ(ms)
@@ -62,6 +65,8 @@ export default createComponent({
     const pathStr = computed<string>(() => {
       if(pathData.anchors.length < 2) { return '' }
       const pts: Point[] = []
+
+      // y座標の配列を元に、アンカーポイント + コントロールポイントの座標配列を生成
       for (let index = 0; index < pathData.anchors.length - 1; index++) {
         const p1 = { x: index, y: pathData.anchors[index]}
         const p2 = { x: index + 1, y: pathData.anchors[index + 1]}
@@ -70,15 +75,15 @@ export default createComponent({
         pts.push(c1, c2, p2)
       }
 
-      // 0-1のy座標配列を元に、アンカーポイントの配列を生成
+      // コントロールポイントの座標配列を実際の画面サイズに合わせて拡大
       const ptsScaled: Point[] = pts.map(p => {
-        // 画面中央で山が高くなるよう元のy座標を増幅する
+        // ついでに、画面中央で山が高くなるよう元のy座標を増幅する
         const xr = (p.x / ANCHOR_COUNT - 0.5) * Math.PI * 1.5
         const wave = Math.pow(Math.max(0, Math.cos(xr)) * 1.5, 2)
         return { x: p.x * XSCALE, y: p.y * YSCALE * wave  + YBASE }
       })
 
-      // アンカーポイントの配列をパス文字列に変換
+      // 最後に、座標配列をパス文字列に変換
       const firstP = { x: 0, y: ptsScaled[0].y } //ptsScaled[0]
       if (!firstP){ return '' }
       return `M${firstP.x},${firstP.y} C` + ptsScaled.map(p => `${p.x},${p.y}`).join(' ')
